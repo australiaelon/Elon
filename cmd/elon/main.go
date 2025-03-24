@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-    "github.com/australiaelon/elon/libelon"
+    "github.com/australiaelon/Elon/libelon"
 )
 
 var (
@@ -60,38 +60,5 @@ func main() {
 
 func printVersion() {
 	versionInfo := libelon.GetVersionInfo()
-
 	fmt.Printf("elon version: %s\n\n", versionInfo["version"])
-
-	fmt.Println("Features:")
-	featuresMap := versionInfo["features"].(map[string]bool)
-
-	features := []struct {
-		name  string
-		value bool
-	}{
-		{"IPv6 support", featuresMap["ipv6"]},
-		{"gVisor support", featuresMap["gvisor"]},
-		{"QUIC support", featuresMap["quic"]},
-		{"Wireguard support", featuresMap["wireguard"]},
-		{"ECH support", featuresMap["ech"]},
-		{"UTLS support", featuresMap["utls"]},
-		{"Clash API support", featuresMap["clash_api"]},
-		{"V2Ray API support", featuresMap["v2ray_api"]},
-		{"ShadowsocksR support", featuresMap["ssr"]},
-		{"DHCP support", featuresMap["dhcp"]},
-		{"Low Memory support", featuresMap["low_memory"]},
-		{"Connection tracking support", featuresMap["conntrack"]},
-		{"System service support", featuresMap["system_service"]},
-	}
-
-	for _, feature := range features {
-		fmt.Printf("  %s: %t\n", feature.name, feature.value)
-	}
-
-	if featuresMap["cgo_enabled"] {
-		fmt.Println("CGO: enabled")
-	} else {
-		fmt.Println("CGO: disabled")
-	}
 }
