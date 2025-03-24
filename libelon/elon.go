@@ -9,8 +9,11 @@ import (
 
 	"github.com/sagernet/sing-box"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/experimental/deprecated"
 	"github.com/sagernet/sing-box/include"
+	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
+	sJson "github.com/sagernet/sing/common/json"
 	"github.com/sagernet/sing/service"
 )
 
@@ -34,7 +37,6 @@ func GetVersionInfo() map[string]interface{} {
 }
 
 func StartWithBase64Config(configBase64 string) (uint64, error) {
-
 	jsonConfig, err := base64.StdEncoding.DecodeString(configBase64)
 	if err != nil {
 		return 0, fmt.Errorf("failed to decode base64 config: %w", err)
@@ -45,18 +47,16 @@ func StartWithBase64Config(configBase64 string) (uint64, error) {
 
 func StartWithJSONConfig(jsonConfig string) (uint64, error) {
 
-	var options option.Options
-	err := json.Unmarshal([]byte(jsonConfig), &options)
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse JSON config: %w", err)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	ctx = service.ContextWithDefaultRegistry(ctx)
-
-	// ctx = service.ContextWith(ctx, box.NewStdoutManager())
-
+	ctx = service.ContextWith(ctx, deprecated.NewStderrManager(log.StdLogger()))
 	ctx = box.Context(ctx, include.InboundRegistry(), include.OutboundRegistry(), include.EndpointRegistry())
+
+	options, err := sJson.UnmarshalExtendedContext[option.Options](ctx, []byte(jsonConfig))
+	if err != nil {
+		cancel()
+		return 0, fmt.Errorf("failed to parse JSON config: %w", err)
+	}
 
 	instance, err := box.New(box.Options{
 		Context: ctx,
@@ -128,4 +128,23 @@ func GetVersionBase64() (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(versionJSON), nil
+}
+
+func StopAll() error {
+	instancesLock.Lock()
+	currentInstances := make(map[uint64]*Instance, len(instances))
+	for id, instance := range instances {
+		currentInstances[id] = instance
+	}
+	instancesLock.Unlock()
+
+	var lastErr error
+	for id := range currentInstances {
+		err := Stop(id)
+		if err != nil {
+			lastErr = err
+		}
+	}
+
+	return lastErr
 }

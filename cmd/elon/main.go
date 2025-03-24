@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-    "github.com/australiaelon/Elon/libelon"
+	"github.com/australiaelon/Elon/libelon"
 )
 
 var (
@@ -44,21 +44,29 @@ func main() {
 
 	osSignals := make(chan os.Signal, 1)
 	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
+	defer signal.Stop(osSignals)
 
-	<-osSignals
+	for {
+		sig := <-osSignals
 
-	fmt.Println("Shutting down...")
+		if sig == syscall.SIGHUP {
 
-	err = libelon.Stop(instanceID)
-	if err != nil {
-		fmt.Printf("Error stopping instance: %v\n", err)
-		os.Exit(1)
+			fmt.Println("Configuration reload via SIGHUP not supported when started with -c flag")
+		} else {
+
+			fmt.Println("Shutting down...")
+			err = libelon.Stop(instanceID)
+			if err != nil {
+				fmt.Printf("Error stopping instance: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println("Gracefully stopped")
+			break
+		}
 	}
-
-	fmt.Println("Gracefully stopped")
 }
 
 func printVersion() {
 	versionInfo := libelon.GetVersionInfo()
-	fmt.Printf("elon version: %s\n\n", versionInfo["version"])
+	fmt.Printf("elon version: %s\n", versionInfo["version"])
 }
